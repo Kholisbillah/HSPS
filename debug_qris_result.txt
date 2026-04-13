@@ -1,0 +1,3 @@
+Token: {"responseCode":"2007300","responseMessage":"Successful","accessToken":"eyJhbGciOiJSUzI1NiJ9.eyJleHAiOjE3NzUwOTY1NzAsImlzcyI6IkRPS1UiLCJjbGllbnRJZCI6IkJSTi0wMjEzLTE3NzUwODk1MzA0NjcifQ.VlZTt2MlMjg7eKZ_C4PajV2YcW4qznEBXtXkkylMeQwpeLQ-D-Y2ilfDGwW44oMkHvzXiOEYNgr4_29tVFAi6f_oIeo76-_zKR63qbsbK4aRKxeKl9ST7FpCzJutFA1dNtiGpXkrOW1KBHxaysvGSkRKrUcK6AG3WMdGDiKWEyjagziPqwAqFoLeZC6A-PRv_j9GRg7tSsd87cSgphBJdsW3EZOFdH5qpR-36OkONVxpgOfxtIWRKgZ-dKB5FPGa6ZPEmBMQTz_PGXKKuX9ram7RPq9MQIy0Oi1tiy3_RVe6ZBeg-_bNyuyC8DJXEFx_eJFv0AXW0ZuEwoQxzHuDig","tokenType":"Bearer","expiresIn":900,"additionalInfo":""}
+
+QRIS: {"responseCode":"5004701","responseMessage":"Internal Server Error"}

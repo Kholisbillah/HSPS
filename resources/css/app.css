@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --c-primary: #047857;       /* Emerald Deep */
+        --c-primary-glow: #34d399;  /* Neon Emerald for Scanning Lines */
+        
+        --c-bg-main: #F8FAFC;
+        --c-surface: #ffffff;
+        --c-surface-glass: rgba(255, 255, 255, 0.8);
+
+        --c-danger: #e11d48;
+        --c-success: #10b981;
+        --c-text-main: #0f172a;
+        --c-text-muted: #64748b;
+    }
+
+    ::selection {
+        @apply bg-emerald-500 text-white;
+    }
+}
