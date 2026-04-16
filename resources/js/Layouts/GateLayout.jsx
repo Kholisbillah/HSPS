@@ -26,6 +26,18 @@ export default function GateLayout({ title, gateName, children, gateType = 'moto
             bg: 'bg-amber-500/20',
             glow: 'shadow-amber-500/50',
         },
+        igd: {
+            border: 'border-rose-500/30',
+            text: 'text-rose-400',
+            bg: 'bg-rose-500/20',
+            glow: 'shadow-rose-500/50',
+        },
+        lainnya: {
+            border: 'border-rose-500/30',
+            text: 'text-rose-400',
+            bg: 'bg-rose-500/20',
+            glow: 'shadow-rose-500/50',
+        },
     };
     const accent = accentClasses[gateType] || accentClasses.motor;
 

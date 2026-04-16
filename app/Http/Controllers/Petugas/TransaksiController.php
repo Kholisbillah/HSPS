@@ -83,8 +83,8 @@ class TransaksiController extends Controller
                 'biaya_total' => 0, // Dihitung saat checkout (gate out)
             ]);
 
-            // Increment Area Capacity
-            $area->increment('terisi');
+            // CATATAN: area_parkir.terisi otomatis di-increment oleh Trigger Database `tr_transaksi_masuk`
+            // JANGAN manual increment di sini — akan menyebabkan double increment!
 
             // Buat data ticket sebagai array (bukan Eloquent object)
             // agar tarif_per_jam ikut terserialisasi melalui flash session

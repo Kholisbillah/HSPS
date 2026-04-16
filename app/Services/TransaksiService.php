@@ -149,10 +149,7 @@ class TransaksiService
      */
     public function getAvailableArea(string $jenisKendaraan): ?AreaParkir
     {
-        return AreaParkir::where(function ($q) use ($jenisKendaraan) {
-                $q->where('peruntukan', $jenisKendaraan)
-                  ->orWhere('peruntukan', 'semua');
-            })
+        return AreaParkir::where('peruntukan', $jenisKendaraan)
             ->whereRaw('terisi < kapasitas')
             ->lockForUpdate()
             ->first();
@@ -166,10 +163,7 @@ class TransaksiService
      */
     public function getKapasitas(string $jenisKendaraan): array
     {
-        $data = AreaParkir::where(function ($q) use ($jenisKendaraan) {
-                $q->where('peruntukan', $jenisKendaraan)
-                  ->orWhere('peruntukan', 'semua');
-            })
+        $data = AreaParkir::where('peruntukan', $jenisKendaraan)
             ->selectRaw('COALESCE(SUM(kapasitas), 0) as total, COALESCE(SUM(terisi), 0) as terisi')
             ->first();
 

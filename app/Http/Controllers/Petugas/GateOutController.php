@@ -109,31 +109,31 @@ class GateOutController extends Controller
                 return response()->json(['message' => 'Transaksi ini sudah selesai.'], 400);
             }
 
-            // KALKULASI ULANG di backend (tidak percaya data dari frontend)
-            $waktuMasuk = Carbon::parse($transaksi->waktu_masuk);
-            $waktuKeluar = now();
-            $durasiJam = $service->hitungDurasiJam($waktuMasuk, $waktuKeluar);
-
             // Cek status VIP
             $isVip = $service->isVip($transaksi->plat_nomor);
+            $karcisHilang = $request->boolean('karcis_hilang', false);
+            $waktuKeluar = now();
 
-            // Hitung biaya dari database tarif
-            $biayaTotal = $service->hitungBiaya($transaksi, $durasiJam, $isVip);
-
-            // Update transaksi dengan data yang dihitung backend
-            $transaksi->update([
-                'waktu_keluar' => $waktuKeluar,
-                'biaya_total' => $biayaTotal,
-                'durasi_jam' => $durasiJam,
-                'status' => 'keluar'
+            // KALKULASI via DATABASE (Stored Procedure)
+            $waktuKeluarFormat = $waktuKeluar->format('Y-m-d H:i:s');
+            DB::statement("CALL proses_checkout(?, ?, ?)", [
+                $transaksi->id_parkir,
+                $waktuKeluarFormat,
+                $karcisHilang ? 1 : 0
             ]);
 
-            // Kurangi kapasitas terisi area parkir (guard agar tidak negatif)
-            if ($transaksi->id_area) {
-                AreaParkir::where('id_area', $transaksi->id_area)
-                    ->where('terisi', '>', 0) // Cegah decrement di bawah 0
-                    ->decrement('terisi');
+            // Refresh karena data dimutasi oleh DB
+            $transaksi->refresh();
+            
+            // Override VIP jika diperlukan
+            if ($isVip) {
+                $transaksi->update(['biaya_total' => 0]);
+                $biayaTotal = 0;
+            } else {
+                $biayaTotal = (int) $transaksi->biaya_total;
             }
+
+            // Catatan: AreaParkir otomatis di-decrement oleh Trigger Database `tr_transaksi_keluar`
 
             // Catat log aktivitas
             $logMsg = 'Petugas memproses Checkout: ' . $transaksi->plat_nomor;

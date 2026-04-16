@@ -295,43 +295,38 @@ class DokuPaymentService
                 return (int) $transaksi->biaya_total;
             }
 
-            // Hitung durasi dan biaya ulang (zero-trust, tidak percaya data frontend)
-            $waktuMasuk = Carbon::parse($transaksi->waktu_masuk);
             $waktuKeluar = now();
-            $durasiJam = $transaksiService->hitungDurasiJam($waktuMasuk, $waktuKeluar);
 
             // Cek apakah VIP
             $isVip = $transaksiService->isVip($transaksi->plat_nomor);
-
-            // Hitung biaya berdasarkan kondisi (VIP / karcis hilang / normal)
-            if ($isVip) {
-                $biayaTotal = 0;
-            } elseif ($karcisHilang) {
-                // Karcis hilang: biaya parkir normal + denda flat
-                $biayaTotal = $transaksiService->hitungBiayaDenda($transaksi->jenis_kendaraan, $durasiJam, $transaksi);
-            } else {
-                $biayaTotal = $transaksiService->hitungBiaya($transaksi, $durasiJam, false);
-            }
-
             $metodePembayaran = $isVip ? 'vip' : 'cashless';
 
-            // Update transaksi — catat waktu keluar, biaya, dan metode pembayaran
-            $transaksi->update([
-                'waktu_keluar' => $waktuKeluar,
-                'durasi_jam' => $durasiJam,
-                'biaya_total' => $biayaTotal,
-                'status' => 'keluar',
-                'gate_type' => $gateCode,
-                'metode_pembayaran' => $metodePembayaran,
-                'karcis_hilang' => $karcisHilang, // Catat status karcis hilang di DB
+            // KALKULASI via DATABASE (Stored Procedure)
+            $waktuKeluarFormat = $waktuKeluar->format('Y-m-d H:i:s');
+            DB::statement("CALL proses_checkout(?, ?, ?)", [
+                $transaksi->id_parkir,
+                $waktuKeluarFormat,
+                $karcisHilang ? 1 : 0
             ]);
 
-            // Decrement area parkir (guard agar tidak negatif)
-            if ($transaksi->id_area) {
-                AreaParkir::where('id_area', $transaksi->id_area)
-                    ->where('terisi', '>', 0)
-                    ->decrement('terisi');
+            // Refresh karena data dimutasi oleh DB
+            $transaksi->refresh();
+            
+            // Override VIP jika diperlukan
+            if ($isVip) {
+                $transaksi->update(['biaya_total' => 0]);
+                $biayaTotal = 0;
+            } else {
+                $biayaTotal = (int) $transaksi->biaya_total;
             }
+
+            // Update field sisanya yang tidak ditangani prosedur
+            $transaksi->update([
+                'gate_type' => $gateCode,
+                'metode_pembayaran' => $metodePembayaran,
+            ]);
+
+            // Catatan: AreaParkir otomatis di-decrement oleh Trigger Database `tr_transaksi_keluar`
 
             // Catat log aktivitas (hanya jika ada user terautentikasi)
             $logMsg = "Checkout: {$transaksi->plat_nomor} via {$gateCode}";

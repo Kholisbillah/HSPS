@@ -30,7 +30,7 @@ class AreaParkirController extends Controller
         $request->validate([
             'nama_area' => 'required|string|max:255|unique:area_parkir',
             'kapasitas' => 'required|integer|min:1',
-            'peruntukan' => 'required|in:motor,mobil,semua',
+            'peruntukan' => 'required|in:motor,mobil,lainnya',
         ]);
 
         AreaParkir::create([
@@ -50,7 +50,7 @@ class AreaParkirController extends Controller
         $request->validate([
             'nama_area' => 'required|string|max:255|unique:area_parkir,nama_area,' . $area->id_area . ',id_area',
             'kapasitas' => 'required|integer|min:1',
-            'peruntukan' => 'required|in:motor,mobil,semua',
+            'peruntukan' => 'required|in:motor,mobil,lainnya',
         ]);
 
         // Pencegahan kapasitas < terisi

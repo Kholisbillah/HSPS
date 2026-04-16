@@ -19,6 +19,7 @@ import {
     Monitor,
     Banknote,
     CreditCard,
+    Siren,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import PasswordConfirmModal from '@/Components/PasswordConfirmModal';
@@ -106,8 +107,8 @@ export default function Authenticated({ user, header, children }) {
 
                     <NavItem href={route('dashboard')} icon={LayoutDashboard} label="Dashboard" active={route().current('dashboard')} />
 
-                    {/* Role: Petugas & Admin — Gate Operations */}
-                    {['petugas', 'admin'].includes(user.role) && (
+                    {/* Role: Petugas & Super Root — Gate Operations */}
+                    {['petugas', 'super_root'].includes(user.role) && (
                         <>
                             <div className="px-6 mt-6 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
                                 Operasional Gate
@@ -144,6 +145,13 @@ export default function Authenticated({ user, header, children }) {
                                             label="Gate B — Roda 4 (Mobil)"
                                             active={url.includes('/gate/masuk/mobil')}
                                             iconColor="text-amber-500"
+                                        />
+                                        <GateNavItem
+                                            gateUrl="/gate/masuk/igd"
+                                            icon={Siren}
+                                            label="Gate IGD — Ambulan"
+                                            active={url.includes('/gate/masuk/igd')}
+                                            iconColor="text-rose-500"
                                         />
                                     </div>
                                 )}
@@ -195,6 +203,13 @@ export default function Authenticated({ user, header, children }) {
                                             active={url.includes('/gate/keluar/4')}
                                             iconColor="text-amber-500"
                                         />
+                                        <GateNavItem
+                                            gateUrl="/gate/keluar/5"
+                                            icon={Siren}
+                                            label="Gate 5 — IGD Keluar"
+                                            active={url.includes('/gate/keluar/5')}
+                                            iconColor="text-rose-500"
+                                        />
                                     </div>
                                 )}
                             </div>
@@ -204,8 +219,8 @@ export default function Authenticated({ user, header, children }) {
                         </>
                     )}
 
-                    {/* Role: Admin */}
-                    {user.role === 'admin' && (
+                    {/* Role: Admin & Super Root */}
+                    {['admin', 'super_root'].includes(user.role) && (
                         <>
                             <div className="px-6 mt-6 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
                                 Master Data
@@ -253,8 +268,8 @@ export default function Authenticated({ user, header, children }) {
                         </>
                     )}
 
-                    {/* Role: Owner */}
-                    {['owner', 'admin'].includes(user.role) && (
+                    {/* Role: Owner & Super Root */}
+                    {['owner', 'super_root'].includes(user.role) && (
                         <>
                             <div className="px-6 mt-6 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
                                 Laporan

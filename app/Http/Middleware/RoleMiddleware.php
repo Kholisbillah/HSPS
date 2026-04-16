@@ -19,7 +19,12 @@ class RoleMiddleware
         $user = $request->user();
 
         // Cek apakah user ada dan role-nya sesuai
-        if (!$user || !in_array($user->role, $roles)) {
+        if (!$user) {
+            abort(403, 'Anda tidak memiliki akses ke halaman ini.');
+        }
+
+        // super_root bebas mengakses semua route yang dilindungi middleware ini
+        if ($user->role !== 'super_root' && !in_array($user->role, $roles)) {
             abort(403, 'Anda tidak memiliki akses ke halaman ini.');
         }
 

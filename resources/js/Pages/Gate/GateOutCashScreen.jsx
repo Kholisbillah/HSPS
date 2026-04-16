@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Search, CheckCircle2, AlertTriangle, ShieldCheck,
     TicketX, X, Bike, Car, Camera, CameraOff, Loader2,
-    ScanLine
+    ScanLine, Siren
 } from 'lucide-react';
 import GateLayout from '@/Layouts/GateLayout';
 import GateCamera from '@/Components/Gate/GateCamera';
@@ -41,6 +41,7 @@ export default function GateOutCashScreen({ gateNum, gateCode, gateName, jenisKe
     const cameraRef = useRef(null);
 
     const isMotor = jenisKendaraan === 'motor';
+    const isIgd = jenisKendaraan === 'lainnya';
 
     // =====================================================================
     // SCAN KARCIS / CARI ID PARKIR
@@ -339,22 +340,24 @@ export default function GateOutCashScreen({ gateNum, gateCode, gateName, jenisKe
                                         ? 'border-emerald-500/30 bg-[#064e3b]/80'
                                         : karcisHilang
                                             ? 'border-red-500/30 bg-[#450a0a]/80'
-                                            : isMotor
-                                                ? 'border-cyan-500/20 bg-cyan-950/60'
-                                                : 'border-amber-500/20 bg-amber-950/60'
+                                            : isIgd
+                                                ? 'border-rose-500/20 bg-rose-950/60'
+                                                : isMotor
+                                                    ? 'border-cyan-500/20 bg-cyan-950/60'
+                                                    : 'border-amber-500/20 bg-amber-950/60'
                                 }`}>
                                     {/* Total Bayar */}
                                     <div className="text-center mb-4 border-b border-white/10 pb-4">
                                         <span className="text-[9px] font-bold uppercase tracking-widest text-slate-300">TOTAL TAGIHAN</span>
                                         <p className={`text-5xl font-['JetBrains_Mono'] font-extrabold mt-1 tracking-tighter ${
-                                            transaksiData.is_vip ? 'text-emerald-400' : karcisHilang ? 'text-red-400' : 'text-white'
+                                            transaksiData.is_vip || isIgd ? 'text-emerald-400' : karcisHilang ? 'text-red-400' : 'text-white'
                                         }`}>
-                                            {transaksiData.is_vip ? 'Rp 0' : `Rp ${Number(biayaTotal).toLocaleString('id-ID')}`}
+                                            {transaksiData.is_vip || isIgd ? 'Rp 0' : `Rp ${Number(biayaTotal).toLocaleString('id-ID')}`}
                                         </p>
                                     </div>
 
-                                    {/* Kolom Uang Tunai */}
-                                    {!transaksiData.is_vip && (
+                                    {/* Kolom Uang Tunai (tersembunyi untuk VIP & IGD) */}
+                                    {!transaksiData.is_vip && !isIgd && (
                                         <div className="flex-1 flex flex-col justify-center space-y-3">
                                             <div className="bg-black/40 p-4 rounded-xl shadow-inner border border-white/10">
                                                 <label className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-2 block text-center">Uang Diterima</label>
@@ -414,6 +417,14 @@ export default function GateOutCashScreen({ gateNum, gateCode, gateName, jenisKe
                                         </div>
                                     )}
 
+                                    {/* IGD / Ambulan info */}
+                                    {!transaksiData.is_vip && isIgd && (
+                                        <div className="flex-1 flex flex-col items-center justify-center">
+                                            <Siren className="w-16 h-16 text-rose-400 mb-3" />
+                                            <p className="text-rose-300 font-['DM_Sans'] font-bold text-sm uppercase tracking-wider">Kendaraan IGD — Gratis</p>
+                                        </div>
+                                    )}
+
                                     {/* Action Buttons */}
                                     <div className="flex gap-3 mt-4">
                                         <button
@@ -424,12 +435,12 @@ export default function GateOutCashScreen({ gateNum, gateCode, gateName, jenisKe
                                             BATAL
                                         </button>
                                         <motion.button
-                                            whileHover={{ scale: processing || (!transaksiData.is_vip && !isUangCukup) ? 1 : 1.02 }}
-                                            whileTap={{ scale: processing || (!transaksiData.is_vip && !isUangCukup) ? 1 : 0.98 }}
+                                            whileHover={{ scale: processing || (!transaksiData.is_vip && !isIgd && !isUangCukup) ? 1 : 1.02 }}
+                                            whileTap={{ scale: processing || (!transaksiData.is_vip && !isIgd && !isUangCukup) ? 1 : 0.98 }}
                                             onClick={handleCheckout}
-                                            disabled={processing || (!transaksiData.is_vip && !isUangCukup)}
+                                            disabled={processing || (!transaksiData.is_vip && !isIgd && !isUangCukup)}
                                             className={`flex-1 py-3.5 rounded-xl text-lg font-['Outfit'] font-bold tracking-widest transition-all shadow-lg flex items-center justify-center gap-2 ${
-                                                processing || (!transaksiData.is_vip && !isUangCukup)
+                                                processing || (!transaksiData.is_vip && !isIgd && !isUangCukup)
                                                     ? 'bg-white/10 text-slate-500 cursor-not-allowed shadow-none'
                                                     : 'bg-emerald-500 text-white shadow-emerald-500/30 hover:bg-emerald-400 ring-2 ring-emerald-500/10'
                                             }`}
@@ -460,7 +471,7 @@ export default function GateOutCashScreen({ gateNum, gateCode, gateName, jenisKe
                             {/* Kolom Kiri — Search + Karcis Hilang */}
                             <div className="w-1/2 flex flex-col gap-3 min-h-0">
                                 {/* Search Input */}
-                                <div className={`rounded-2xl border ${isMotor ? 'border-cyan-500/20 bg-cyan-900/20' : 'border-amber-500/20 bg-amber-900/20'} p-5 shadow-xl backdrop-blur-2xl shrink-0`}>
+                                <div className={`rounded-2xl border ${isIgd ? 'border-rose-500/20 bg-rose-900/20' : isMotor ? 'border-cyan-500/20 bg-cyan-900/20' : 'border-amber-500/20 bg-amber-900/20'} p-5 shadow-xl backdrop-blur-2xl shrink-0`}>
                                     <label className="text-[9px] font-bold uppercase tracking-wider text-slate-300 mb-2 block">
                                         Masukkan No. Karcis atau ID Parkir
                                     </label>
@@ -482,9 +493,11 @@ export default function GateOutCashScreen({ gateNum, gateCode, gateName, jenisKe
                                             className={`px-6 rounded-xl font-['DM_Sans'] font-bold tracking-widest transition-all shadow-lg ${
                                                 processing || !searchQuery.trim()
                                                     ? 'bg-slate-800 text-slate-500 shadow-none'
-                                                    : isMotor
-                                                        ? 'bg-cyan-500 text-white shadow-cyan-500/20'
-                                                        : 'bg-amber-500 text-white shadow-amber-500/20'
+                                                    : isIgd
+                                                        ? 'bg-rose-500 text-white shadow-rose-500/20'
+                                                        : isMotor
+                                                            ? 'bg-cyan-500 text-white shadow-cyan-500/20'
+                                                            : 'bg-amber-500 text-white shadow-amber-500/20'
                                             }`}
                                         >
                                             {processing ? (
@@ -534,7 +547,7 @@ export default function GateOutCashScreen({ gateNum, gateCode, gateName, jenisKe
                                                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors text-left group"
                                             >
                                                 <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-white/5 border border-white/10 group-hover:bg-white/20 shadow-sm transition-colors shrink-0">
-                                                    {isMotor ? <Bike className="w-4 h-4 text-cyan-400" /> : <Car className="w-4 h-4 text-amber-400" />}
+                                                    {isIgd ? <Siren className="w-4 h-4 text-rose-400" /> : isMotor ? <Bike className="w-4 h-4 text-cyan-400" /> : <Car className="w-4 h-4 text-amber-400" />}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <span className="font-['JetBrains_Mono'] text-sm font-bold text-white tracking-wide block">
@@ -576,9 +589,10 @@ export default function GateOutCashScreen({ gateNum, gateCode, gateName, jenisKe
                                     ) : (
                                         <div className="w-full h-full flex flex-col items-center justify-center text-center p-8">
                                             <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mb-5 ${
+                                                isIgd ? 'bg-rose-500/10 border border-rose-500/20' :
                                                 isMotor ? 'bg-cyan-500/10 border border-cyan-500/20' : 'bg-amber-500/10 border border-amber-500/20'
                                             }`}>
-                                                <CameraOff className={`w-10 h-10 ${isMotor ? 'text-cyan-400/50' : 'text-amber-400/50'}`} />
+                                                <CameraOff className={`w-10 h-10 ${isIgd ? 'text-rose-400/50' : isMotor ? 'text-cyan-400/50' : 'text-amber-400/50'}`} />
                                             </div>
                                             <h3 className="text-lg font-['Outfit'] font-bold text-white/80 mb-1">Kamera Tidak Aktif</h3>
                                             <p className="text-slate-400 font-['DM_Sans'] text-xs max-w-xs mb-5 leading-relaxed">
@@ -589,9 +603,11 @@ export default function GateOutCashScreen({ gateNum, gateCode, gateName, jenisKe
                                                 whileTap={{ scale: 0.95 }}
                                                 onClick={() => setCameraOn(true)}
                                                 className={`px-6 py-3 rounded-xl font-['Outfit'] font-bold text-base tracking-wider transition-all shadow-lg flex items-center gap-2 ${
-                                                    isMotor
-                                                        ? 'bg-cyan-600 text-white hover:bg-cyan-500 shadow-cyan-900/50'
-                                                        : 'bg-amber-600 text-white hover:bg-amber-500 shadow-amber-900/50'
+                                                    isIgd
+                                                        ? 'bg-rose-600 text-white hover:bg-rose-500 shadow-rose-900/50'
+                                                        : isMotor
+                                                            ? 'bg-cyan-600 text-white hover:bg-cyan-500 shadow-cyan-900/50'
+                                                            : 'bg-amber-600 text-white hover:bg-amber-500 shadow-amber-900/50'
                                                 }`}
                                             >
                                                 <Camera className="w-5 h-5" />

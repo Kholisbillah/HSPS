@@ -20,10 +20,10 @@ import Barcode from 'react-barcode';
  * - Plat nomor TIDAK diinput manual — VIP dari database, umum diisi '-'.
  *
  * Props dari GateController@showGateIn:
- * - gateType: 'motor' | 'mobil'
- * - gateCode: 'gate_in_motor' | 'gate_in_mobil'
+ * - gateType: 'motor' | 'mobil' | 'igd'
+ * - gateCode: 'gate_in_motor' | 'gate_in_mobil' | 'gate_in_igd'
  * - gateName: Nama tampilan gate
- * - jenisKendaraan: 'motor' | 'mobil'
+ * - jenisKendaraan: 'motor' | 'mobil' | 'lainnya'
  * - kapasitas: { total, terisi, tersedia }
  */
 export default function GateInScreen({ gateType, gateCode, gateName, jenisKendaraan, kapasitas }) {
@@ -61,6 +61,10 @@ export default function GateInScreen({ gateType, gateCode, gateName, jenisKendar
 
     // Aksen warna berdasarkan jenis kendaraan
     const isMotor = gateType === 'motor';
+    const isIgd = gateType === 'igd';
+
+    // Warna aksen dinamis
+    const accentColor = isIgd ? 'rose' : isMotor ? 'cyan' : 'amber';
 
     // =====================================================================
     // CALLBACK: Kamera siap — auto capture jika ada pending
@@ -371,13 +375,20 @@ export default function GateInScreen({ gateType, gateCode, gateName, jenisKendar
                                     /* Kamera MATI — placeholder statis */
                                     <div className="flex-1 flex flex-col items-center justify-center text-center p-12 min-h-[400px]">
                                         <div className={`w-28 h-28 rounded-full flex items-center justify-center mb-8 ${
+                                            isIgd ? 'bg-rose-500/10 border-2 border-rose-500/20' :
                                             isMotor ? 'bg-cyan-500/10 border-2 border-cyan-500/20' : 'bg-amber-500/10 border-2 border-amber-500/20'
                                         }`}>
-                                            <Camera className={`w-14 h-14 ${isMotor ? 'text-cyan-400/60' : 'text-amber-400/60'}`} />
+                                            <Camera className={`w-14 h-14 ${
+                                                isIgd ? 'text-rose-400/60' :
+                                                isMotor ? 'text-cyan-400/60' : 'text-amber-400/60'
+                                            }`} />
                                         </div>
                                         <h3 className="text-2xl font-['Outfit'] font-bold text-white/80 mb-3">Kamera Siap</h3>
                                         <p className="text-slate-400 font-['DM_Sans'] text-sm max-w-md leading-relaxed">
-                                            Tekan tombol <span className="font-bold text-white">AMBIL TIKET</span> untuk mengaktifkan kamera dan mengambil foto kendaraan secara otomatis.
+                                            {isIgd
+                                                ? <>Tekan tombol <span className="font-bold text-white">CATAT MASUK</span> untuk mencatat kendaraan IGD/Ambulan masuk.</>  
+                                                : <>Tekan tombol <span className="font-bold text-white">AMBIL TIKET</span> untuk mengaktifkan kamera dan mengambil foto kendaraan secara otomatis.</>  
+                                            }
                                         </p>
                                     </div>
                                 )}
@@ -423,7 +434,7 @@ export default function GateInScreen({ gateType, gateCode, gateName, jenisKendar
                                             <h4 className="text-white font-['Outfit'] font-bold text-xl leading-tight">Kapasitas Parkir</h4>
                                             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1 block">Live Status Counter</span>
                                         </div>
-                                        <span className={`font-['JetBrains_Mono'] text-5xl font-bold tracking-tighter leading-none ${isFull ? 'text-red-400' : isMotor ? 'text-cyan-400' : 'text-amber-400'}`}>
+                                        <span className={`font-['JetBrains_Mono'] text-5xl font-bold tracking-tighter leading-none ${isFull ? 'text-red-400' : isIgd ? 'text-rose-400' : isMotor ? 'text-cyan-400' : 'text-amber-400'}`}>
                                             {currentKapasitas.tersedia}
                                         </span>
                                     </div>
@@ -436,6 +447,7 @@ export default function GateInScreen({ gateType, gateCode, gateName, jenisKendar
                                             className={`h-full rounded-full ${
                                                 fillPercentage >= 90 ? 'bg-red-500' :
                                                 fillPercentage >= 70 ? 'bg-amber-500' :
+                                                isIgd ? 'bg-rose-500' :
                                                 isMotor ? 'bg-cyan-500' : 'bg-amber-500'
                                             }`}
                                         />
@@ -451,7 +463,8 @@ export default function GateInScreen({ gateType, gateCode, gateName, jenisKendar
                                     </div>
                                 </div>
 
-                                {/* Box 2: Tombol SCAN QR VIP — aktifkan kamera + mode scan */}
+                                {/* Box 2: Tombol SCAN QR VIP — aktifkan kamera + mode scan (hanya untuk motor/mobil, bukan IGD) */}
+                                {!isIgd && (
                                 <motion.button
                                     whileHover={{ scale: processing ? 1 : 1.02 }}
                                     whileTap={{ scale: processing ? 1 : 0.98 }}
@@ -467,6 +480,7 @@ export default function GateInScreen({ gateType, gateCode, gateName, jenisKendar
                                         Tekan untuk mengaktifkan kamera & scan QR member VIP
                                     </p>
                                 </motion.button>
+                                )}
 
                                 {/* Box 3: Action Button — AMBIL TIKET */}
                                 <motion.button
@@ -477,9 +491,11 @@ export default function GateInScreen({ gateType, gateCode, gateName, jenisKendar
                                     className={`w-full py-6 rounded-[2rem] flex flex-col items-center justify-center gap-3 transition-colors shrink-0 shadow-lg ${
                                         isFull || processing
                                             ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                                            : isMotor
-                                                ? 'bg-cyan-600 text-white hover:bg-cyan-500 shadow-cyan-900/50'
-                                                : 'bg-amber-600 text-white hover:bg-amber-500 shadow-amber-900/50'
+                                            : isIgd
+                                                ? 'bg-rose-600 text-white hover:bg-rose-500 shadow-rose-900/50'
+                                                : isMotor
+                                                    ? 'bg-cyan-600 text-white hover:bg-cyan-500 shadow-cyan-900/50'
+                                                    : 'bg-amber-600 text-white hover:bg-amber-500 shadow-amber-900/50'
                                     }`}
                                 >
                                     {processing ? (
@@ -490,7 +506,7 @@ export default function GateInScreen({ gateType, gateCode, gateName, jenisKendar
                                     ) : (
                                         <>
                                             <Camera className="w-10 h-10" />
-                                            <span className="text-2xl font-['Outfit'] font-bold tracking-wider">AMBIL TIKET</span>
+                                            <span className="text-2xl font-['Outfit'] font-bold tracking-wider">{isIgd ? 'CATAT MASUK' : 'AMBIL TIKET'}</span>
                                         </>
                                     )}
                                 </motion.button>
@@ -584,9 +600,11 @@ export default function GateInScreen({ gateType, gateCode, gateName, jenisKendar
                                             whileTap={{ scale: 0.98 }}
                                             onClick={handlePrint}
                                             className={`w-full py-5 rounded-[2rem] flex items-center justify-center gap-4 font-['Outfit'] font-bold text-xl shadow-xl transition-colors ${
-                                                isMotor
-                                                    ? 'bg-cyan-600 text-white hover:bg-cyan-500 shadow-cyan-900/50'
-                                                    : 'bg-amber-600 text-white hover:bg-amber-500 shadow-amber-900/50'
+                                                isIgd
+                                                    ? 'bg-rose-600 text-white hover:bg-rose-500 shadow-rose-900/50'
+                                                    : isMotor
+                                                        ? 'bg-cyan-600 text-white hover:bg-cyan-500 shadow-cyan-900/50'
+                                                        : 'bg-amber-600 text-white hover:bg-amber-500 shadow-amber-900/50'
                                             }`}
                                         >
                                             <Printer className="w-7 h-7" />

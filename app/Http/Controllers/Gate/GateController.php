@@ -30,7 +30,20 @@ class GateController extends Controller
         '2' => ['kode' => 'gate_out_2', 'jenis' => 'mobil', 'pembayaran' => 'cash'],
         '3' => ['kode' => 'gate_out_3', 'jenis' => 'motor', 'pembayaran' => 'cashless'],
         '4' => ['kode' => 'gate_out_4', 'jenis' => 'mobil', 'pembayaran' => 'cashless'],
+        '5' => ['kode' => 'gate_out_5', 'jenis' => 'lainnya', 'pembayaran' => 'cash'],
     ];
+
+    /**
+     * Map gate type URL parameter ke jenis_kendaraan di database.
+     * 'igd' → 'lainnya' (enum value yang sudah ada di tabel transaksi/tarif)
+     */
+    private function mapGateTypeToJenis(string $gateType): string
+    {
+        return match ($gateType) {
+            'igd' => 'lainnya',
+            default => $gateType,
+        };
+    }
 
     // ========================================================================
     // GATE MASUK (Self-Service Touchscreen)
@@ -43,7 +56,7 @@ class GateController extends Controller
     public function showGateIn(string $gateType, TransaksiService $service)
     {
         // Validasi tipe gate
-        if (!in_array($gateType, ['motor', 'mobil'])) {
+        if (!in_array($gateType, ['motor', 'mobil', 'igd'])) {
             abort(404, 'Gate tidak ditemukan.');
         }
 
@@ -56,16 +69,21 @@ class GateController extends Controller
             ]);
         }
 
+        // Map gate type ke jenis kendaraan DB
+        $jenisKendaraan = $this->mapGateTypeToJenis($gateType);
+
         // Hitung kapasitas untuk jenis kendaraan ini
-        $kapasitas = $service->getKapasitas($gateType);
+        $kapasitas = $service->getKapasitas($jenisKendaraan);
 
         return Inertia::render('Gate/GateInScreen', [
             'gateType'       => $gateType,
             'gateCode'       => 'gate_in_' . $gateType,
-            'gateName'       => $gateType === 'motor'
-                ? 'Gate Masuk A — Roda 2 (Motor)'
-                : 'Gate Masuk B — Roda 4 (Mobil)',
-            'jenisKendaraan' => $gateType,
+            'gateName'       => match ($gateType) {
+                'motor' => 'Gate Masuk A — Roda 2 (Motor)',
+                'mobil' => 'Gate Masuk B — Roda 4 (Mobil)',
+                'igd'   => 'Gate Masuk C — IGD / Emergency',
+            },
+            'jenisKendaraan' => $jenisKendaraan,
             'kapasitas'      => $kapasitas,
         ]);
     }
@@ -77,7 +95,7 @@ class GateController extends Controller
     public function processGateIn(string $gateType, Request $request, TransaksiService $service)
     {
         // Validasi tipe gate
-        if (!in_array($gateType, ['motor', 'mobil'])) {
+        if (!in_array($gateType, ['motor', 'mobil', 'igd'])) {
             abort(404);
         }
 
@@ -88,7 +106,8 @@ class GateController extends Controller
             'foto_masuk'   => 'nullable|url|max:500', // URL Cloudinary dari frontend
         ]);
 
-        $jenisKendaraan = $gateType;
+        // Map gate type ke jenis kendaraan DB ('igd' → 'lainnya')
+        $jenisKendaraan = $this->mapGateTypeToJenis($gateType);
         $platNomor = $request->plat_nomor
             ? $service->sanitizePlatNomor($request->plat_nomor)
             : null;
@@ -161,8 +180,8 @@ class GateController extends Controller
                 'foto_masuk'        => $fotoMasuk,
             ]);
 
-            // Increment kapasitas area
-            $area->increment('terisi');
+            // CATATAN: area_parkir.terisi otomatis di-increment oleh Trigger Database `tr_transaksi_masuk`
+            // JANGAN manual increment di sini — akan menyebabkan double increment!
 
             // Catat log aktivitas
             $logMsg = "Kendaraan Masuk: {$platNomor} via Gate " . strtoupper($gateType);
@@ -396,39 +415,39 @@ class GateController extends Controller
             $isVip = $service->isVip($transaksi->plat_nomor);
             $karcisHilang = $request->boolean('karcis_hilang', false);
 
-            // Hitung biaya berdasarkan kondisi
+            $metodePembayaran = $config['pembayaran'];
+            $metodePembayaran = $request->metode_pembayaran ?? $metodePembayaran;
             if ($isVip) {
-                $biayaTotal = 0;
                 $metodePembayaran = 'vip';
-            } elseif ($karcisHilang) {
-                $biayaTotal = $service->hitungBiayaDenda($transaksi->jenis_kendaraan, $durasiJam, $transaksi);
-                $metodePembayaran = $config['pembayaran'];
-            } else {
-                $biayaTotal = $service->hitungBiaya($transaksi, $durasiJam, false);
-                $metodePembayaran = $config['pembayaran'];
             }
 
-            // Override metode_pembayaran jika frontend mengirim (untuk VIP)
-            $metodePembayaran = $request->metode_pembayaran ?? $metodePembayaran;
-
-            // Update transaksi — simpan foto keluar jika ada
-            $transaksi->update([
-                'waktu_keluar'       => $waktuKeluar,
-                'biaya_total'        => $biayaTotal,
-                'durasi_jam'         => $durasiJam,
-                'status'             => 'keluar',
-                'gate_type'          => $config['kode'],
-                'metode_pembayaran'  => $metodePembayaran,
-                'karcis_hilang'      => $karcisHilang, // Catat status karcis hilang
-                'foto_keluar'        => $request->foto_keluar,
+            // KALKULASI via DATABASE (Stored Procedure)
+            $waktuKeluarFormat = $waktuKeluar->format('Y-m-d H:i:s');
+            DB::statement("CALL proses_checkout(?, ?, ?)", [
+                $transaksi->id_parkir,
+                $waktuKeluarFormat,
+                $karcisHilang ? 1 : 0
             ]);
 
-            // Decrement area (guard agar tidak negatif)
-            if ($transaksi->id_area) {
-                AreaParkir::where('id_area', $transaksi->id_area)
-                    ->where('terisi', '>', 0)
-                    ->decrement('terisi');
+            // Refresh karena data dimutasi oleh DB
+            $transaksi->refresh();
+            
+            // Override VIP jika diperlukan (karena prosedur tidak mengecek auth VIP_
+            if ($isVip) {
+                $transaksi->update(['biaya_total' => 0]);
+                $biayaTotal = 0;
+            } else {
+                $biayaTotal = (int) $transaksi->biaya_total;
             }
+
+            // Update field sisanya yang tidak ditangani prosedur
+            $transaksi->update([
+                'gate_type'         => $config['kode'],
+                'metode_pembayaran' => $metodePembayaran,
+                'foto_keluar'       => $request->foto_keluar,
+            ]);
+
+            // Catatan: AreaParkir otomatis di-decrement oleh Trigger Database `tr_transaksi_keluar`
 
             // Hitung kembalian (hanya untuk cash)
             $uangDibayar = $isVip ? 0 : ($request->uang_dibayar ?? $biayaTotal);
